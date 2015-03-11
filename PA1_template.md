@@ -2,10 +2,18 @@
 
 Set up the libraries, and read the data
 
-```{r}
+
+```r
 library(ggplot2)
 library(scales)
 library(gridExtra)
+```
+
+```
+## Loading required package: grid
+```
+
+```r
 datadir <- "."  # change for other locations
 activity <- read.csv(paste(datadir, "/activity.csv", sep = ""), stringsAsFactors = FALSE)
 ```
@@ -26,7 +34,8 @@ activity <- read.csv(paste(datadir, "/activity.csv", sep = ""), stringsAsFactors
 
  3. Calculate and report the mean and median of the total number of steps taken per day
 
-```{r}
+
+```r
 StepsPerDay <- tapply(activity$steps, activity$date, sum, na.rm = TRUE)
 myfunc <- function(x){ # function to count non-missings and put into tapply
      y <- sum(!is.na(x))
@@ -37,7 +46,8 @@ StepsPerDay <- ifelse(nonMissingStepsPerDay == 0, NA, StepsPerDay) # empty sums 
 
 ### the histogram
 
-```{r}
+
+```r
 p <- ggplot(data.frame(StepsPerDay), aes(x = StepsPerDay)) + 
      labs(x = "Steps per day (Bin width 1000)", y = "Count") +
      ggtitle("Total Steps Per Day Histogram \n (Days with no non-missing steps ignored)")
@@ -45,11 +55,25 @@ pp <- p + layer(geom = "histogram", binwidth = 1000) + scale_y_continuous(breaks
 pp
 ```
 
+![plot of chunk unnamed-chunk-3](figure/unnamed-chunk-3-1.png) 
+
 ### The requested summary statistics
 
-```{r}
+
+```r
 mean(StepsPerDay, na.rm = TRUE)
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(StepsPerDay, na.rm = TRUE)
+```
+
+```
+## [1] 10765
 ```
 
 
@@ -71,7 +95,8 @@ averaged across all days (y-axis)
 
  2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
-```{r}
+
+```r
 MeanStepsPerInterval <- tapply(activity$steps, activity$interval, mean, na.rm = TRUE)
 MeanFrame <- data.frame(interval = as.numeric(names(MeanStepsPerInterval)), MeanSteps = MeanStepsPerInterval)
 MeanFrame$hm <- sprintf("%02d:%02d", MeanFrame$interval %/% 100, MeanFrame$interval %% 100)
@@ -81,17 +106,25 @@ MeanFrame$timec <- as.POSIXct(MeanFrame$time)
 
 ### The time series plot
 
-```{r}
+
+```r
 q <- ggplot(MeanFrame, aes(x = timec, y = MeanSteps)) + scale_x_datetime(labels = date_format("%H:%M")) +
      ggtitle("Mean Steps Per Interval \nAveraged over Days") + labs(x = "Time Interval", y = "Steps")
 qq <- q + layer(geom = "line") 
 qq
 ```
 
+![plot of chunk unnamed-chunk-6](figure/unnamed-chunk-6-1.png) 
+
 ### The interval with the maximum number of steps
 
-```{r}
+
+```r
 names(which.max(MeanStepsPerInterval))
+```
+
+```
+## [1] "835"
 ```
 
 ## Imputing missing values
@@ -108,8 +141,13 @@ Note that there are a number of days/intervals where there are missing values (c
 
 ### The total number of missings
 
-```{r}
+
+```r
 sum(is.na(activity$steps))  
+```
+
+```
+## [1] 2304
 ```
 
 The first step in any missing data imputation is to examine and attempt to understand the missing data pattern. (Reference Little and Rubin, or any other textbook on the subject.)
@@ -118,7 +156,8 @@ The first step in any missing data imputation is to examine and attempt to under
 
 * The imputation used here is to simply take the mean of each interval, and to impute it for the missing days. In principle one could perhaps try to classify the days, as in the next part of the assignment. In view of the specification that has not been done.
 
-```{r}
+
+```r
 # compute the imputation to be used, and then use it as necessary
 activity$imputation <- MeanStepsPerInterval[as.character(activity$interval)]
 activity$imputedsteps <- ifelse(is.na(activity$steps), activity$imputation, activity$steps)
@@ -126,7 +165,8 @@ activity$imputedsteps <- ifelse(is.na(activity$steps), activity$imputation, acti
 
 ### The histogram
 
-```{r}
+
+```r
 # Use the graphics code from the first part -- there won't be any NA now
 StepsPerDaywithimputation <- tapply(activity$imputedsteps, activity$date, sum)
 
@@ -137,11 +177,25 @@ ppi <- pi + layer(geom = "histogram", binwidth = 1000) + scale_y_continuous(brea
 ppi
 ```
 
+![plot of chunk unnamed-chunk-10](figure/unnamed-chunk-10-1.png) 
+
 ### The requested summary statistics
 
-```{r}
+
+```r
 mean(StepsPerDaywithimputation) # unchanged, as anticipated
+```
+
+```
+## [1] 10766.19
+```
+
+```r
 median(StepsPerDaywithimputation) # off by a hair
+```
+
+```
+## [1] 10766.19
 ```
 
 
@@ -164,7 +218,8 @@ For this part the ```weekdays() ``` function may be of some help here. Use the d
 
 ### The time series panel plot
 
-```{r}
+
+```r
 # convert the character string into a date
 activity$daytype <- ifelse(weekdays(as.Date(activity$date)) %in% c("Saturday", "Sunday"), "weekend", "weekday")
 
@@ -203,4 +258,6 @@ qweekend <- ggplot(weekendMeanFrame, aes(x = timec, y = MeanSteps)) +
 grid.arrange(qweekend, qweekday, nrow=2, main = "Mean Steps per Interval averaged over Weekends and Weekdays",
              sub = "Time Interval")
 ```
+
+![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12-1.png) 
 
