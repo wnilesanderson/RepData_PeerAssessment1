@@ -6,14 +6,7 @@ Set up the libraries, and read the data
 ```r
 library(ggplot2)
 library(scales)
-library(gridExtra)
-```
-
-```
-## Loading required package: grid
-```
-
-```r
+library(reshape2)
 datadir <- "."  # change for other locations
 activity <- read.csv(paste(datadir, "/activity.csv", sep = ""), stringsAsFactors = FALSE)
 ```
@@ -120,11 +113,13 @@ qq
 
 
 ```r
-names(which.max(MeanStepsPerInterval))
+maxname <- as.numeric(names(which.max(MeanStepsPerInterval)))
+timename <- sprintf("%02d:%02d", maxname %/% 100, maxname %% 100)
+print (timename, quote = FALSE)
 ```
 
 ```
-## [1] "835"
+## [1] 08:35
 ```
 
 ## Imputing missing values
@@ -223,41 +218,30 @@ For this part the ```weekdays() ``` function may be of some help here. Use the d
 # convert the character string into a date
 activity$daytype <- ifelse(weekdays(as.Date(activity$date)) %in% c("Saturday", "Sunday"), "weekend", "weekday")
 
-# it ought to be possible to do the two graphs in one fell swoop using a facets approach
-# the timing is such that I will just try to do them one at a time and then use grid.arrange
-# come back to the point later
-weekdayactivity <- activity[activity$daytype == "weekday",]
-weekendactivity <- activity[activity$daytype == "weekend",]
 
+activitymelt <- melt(activity, id = c("interval", "daytype"), measure.vars = ("imputedsteps"))
+str(activitymelt)
+```
 
-weekdayMeanStepsPerInterval <- tapply(weekdayactivity$imputedsteps, weekdayactivity$interval, mean)
-weekdayMeanFrame <- data.frame(interval = as.numeric(names(weekdayMeanStepsPerInterval)), 
-                               MeanSteps = weekdayMeanStepsPerInterval)
-weekdayMeanFrame$hm <- sprintf("%02d:%02d", weekdayMeanFrame$interval %/% 100, weekdayMeanFrame$interval %% 100)
-weekdayMeanFrame$time <- strptime(weekdayMeanFrame$hm, "%H:%M") 
-weekdayMeanFrame$timec <- as.POSIXct(weekdayMeanFrame$time)
+```
+## 'data.frame':	17568 obs. of  4 variables:
+##  $ interval: int  0 5 10 15 20 25 30 35 40 45 ...
+##  $ daytype : chr  "weekday" "weekday" "weekday" "weekday" ...
+##  $ variable: Factor w/ 1 level "imputedsteps": 1 1 1 1 1 1 1 1 1 1 ...
+##  $ value   : num  1.717 0.3396 0.1321 0.1509 0.0755 ...
+```
 
-qweekday <- ggplot(weekdayMeanFrame, aes(x = timec, y = MeanSteps)) + 
+```r
+graphdata <- dcast(activitymelt, interval + daytype ~ variable, mean)
+
+graphdata$hm <- sprintf("%02d:%02d", graphdata$interval %/% 100, graphdata$interval %% 100)
+graphdata$timec <- as.POSIXct(strptime(graphdata$hm, "%H:%M"))
+qqq <- ggplot(graphdata, aes(x = timec, y = imputedsteps)) +
      scale_x_datetime(labels = date_format("%H:%M")) +
-     ggtitle("Weekdays") + labs(x = "", y = "Steps") +
-     layer(geom = "line")
-
-
-weekendMeanStepsPerInterval <- tapply(weekendactivity$imputedsteps, weekendactivity$interval, mean)
-weekendMeanFrame <- data.frame(interval = as.numeric(names(weekendMeanStepsPerInterval)), 
-                               MeanSteps = weekendMeanStepsPerInterval)
-weekendMeanFrame$hm <- sprintf("%02d:%02d", weekendMeanFrame$interval %/% 100, weekendMeanFrame$interval %% 100)
-weekendMeanFrame$time <- strptime(weekendMeanFrame$hm, "%H:%M") 
-weekendMeanFrame$timec <- as.POSIXct(weekendMeanFrame$time)
-
-qweekend <- ggplot(weekendMeanFrame, aes(x = timec, y = MeanSteps)) + 
-     scale_x_datetime(labels = date_format("%H:%M")) +
-     ggtitle("Weekends") + labs(x = "", y = "Steps") +
-     layer(geom = "line") 
-
-grid.arrange(qweekend, qweekday, nrow=2, main = "Mean Steps per Interval averaged over Weekends and Weekdays",
-             sub = "Time Interval")
+     ggtitle("Mean Steps per Interval averaged over Weekends and Weekdays") +
+     labs(x = "Time interval", y = "Steps with missings singly imputed") +
+     layer(geom = "line") + facet_wrap(~daytype, nrow = 2)
+qqq
 ```
 
 ![plot of chunk unnamed-chunk-12](figure/unnamed-chunk-12-1.png) 
-
